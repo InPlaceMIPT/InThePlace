@@ -2,7 +2,6 @@ import logging.config
 
 import requests
 import telebot
-from telebot import types
 
 import config
 import utils
@@ -20,7 +19,7 @@ log = logging.getLogger('main')
 
 # True, если пользователь в стадии ответа на вопросы
 
-STATUS = False
+users_info = {}
 
 
 # ================== COMMANDS ==================
@@ -28,6 +27,7 @@ STATUS = False
 def start(message):
     bot.send_message(chat_id=message.chat.id, text=config.HELP_INFO)
     log.info('bot started in chat_id={}'.format(message.chat.id))
+    users_info[message.chat.id] = [False, 0, []]
 
 
 @bot.message_handler(commands=["echo"])
@@ -69,22 +69,38 @@ def session(message):
                      text="Выберите одно число:",
                      reply_markup=markup)
 
-    # помечаем, что теперь пользователь подбирает себе место
-    # TODO: сколько вопросов задавать?
-    global STATUS
-    STATUS = True
+    users_info[message.chat.id][0] = True
+    send_image(message, users_info[message.chat.id][1])
 
 
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(content_types=['text'])
 def check_answer(message):
-    global STATUS
-    if STATUS == True:
-        STATUS = False
-        markup = types.ReplyKeyboardRemove(selective=False)
-        bot.send_message(chat_id=message.chat.id,
-                         text='Ваш ответ: {}'.format(message.text),
-                         reply_markup=markup)
-        log.debug('/check_answer called in chat_id={}'.format(message.chat.id))
+    if message.text in ['1', '2', '3', '4'] and users_info[message.chat.id][0]:
+        users_info[message.chat.id][2].append(message.text)
+        users_info[message.chat.id][1] += 1
+        if users_info[message.chat.id][1] < config.N_GROUPS:
+            send_image(message, users_info[message.chat.id][1])
+        else:
+            recommend_event(message)
+
+
+def recommend_event(message):
+    bot.send_message(chat_id=message.chat.id, text='ок! Я выбираю подходящее место...')
+    r = requests.post(url=config.RECOMEND_URL, json={'images': [224, 430]})
+    events = r.json()
+    for event in events:
+        pass
+
+
+def send_image(message, n_group):
+    print('!!!', n_group)
+    r = requests.get(url=config.FOUR_PICS_IDS, params={'group': '{}'.format(n_group)})
+    print(r.json())
+    r = requests.get(url=config.FOUR_PICS_URL, params={'group': '{}'.format(n_group)})
+    print('!!!!!!!!!!')
+    print(r.json())
+    image_link = r.json()['image']
+    bot.send_photo(chat_id=message.chat.id, photo=image_link)
 
 
 bot.polling()
