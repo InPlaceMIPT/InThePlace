@@ -87,9 +87,17 @@ def check_answer(message):
 def recommend_event(message):
     bot.send_message(chat_id=message.chat.id, text='ок! Я выбираю подходящее место...')
     r = requests.post(url=config.RECOMEND_URL, json={'images': [224, 430]})
-    events = r.json()
-    for event in events:
-        pass
+    events = r.json()['events']
+    print('events', events)
+    r = requests.post(url=config.INFO_LIST_URL, json={'events': events})
+    places = r.json()['places']
+    print('places', places)
+    for place in places:
+        response_msg = config.gen_place_output(place)
+        location = place['location']
+        bot.send_message(chat_id=message.chat.id, text=response_msg)
+        bot.send_location(chat_id=message.chat.id,
+                          latitude=location['latitude'], longitude=location['longitude'])
 
 
 def send_image(message, n_group):
@@ -103,4 +111,5 @@ def send_image(message, n_group):
     bot.send_photo(chat_id=message.chat.id, photo=image_link)
 
 
-bot.polling()
+if __name__ == '__main__':
+    bot.polling(none_stop=True)

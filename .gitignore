@@ -1,3 +1,5 @@
 
 .DS_Store
 bot/token_info.py
+bot/inplace_bot.log
+*.xml
