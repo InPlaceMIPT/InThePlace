@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+  web:
+    build: .
+    env_file: .env
+    volumes:
+      - ./:/code
+    ports:
+      - "8000:8000"
+    tty: true
+    depends_on:
+      - db
